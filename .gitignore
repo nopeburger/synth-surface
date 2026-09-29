@@ -4,6 +4,7 @@ __pycache__/
 *.blend[0-9]
 *.log
 *.png
+!docs/images/*.png
 *.jpg
 *.jpeg
 *.mp4

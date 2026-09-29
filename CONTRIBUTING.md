@@ -11,4 +11,6 @@ Synth Surface is a Blender port of [Displacement X](https://github.com/satelllte
 
 If SVG sprites change, run `python scripts/build_sprite_cache.py` before building. This development-only step requires Inkscape on `PATH`, Pillow, and NumPy. The built cache is used by Blender; no SVG converter is needed at runtime.
 
+The documentation render can be regenerated with `scripts/render_surface_example.py` in Blender background mode from a system temporary working directory. Save only intended images under `docs/images/`, then run `python scripts/scrub_png_metadata.py` to remove scene and file metadata from all published PNGs. The scatter-light comparison image is a render made with the same add-on; retain it unless its lighting example changes.
+
 Keep generated scenes, rendered previews, test reports, logs, archives, personal paths, credentials, and machine-specific settings out of commits. `.gitignore` excludes common generated files; review `git status` and the release ZIP file list before publishing.

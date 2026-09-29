@@ -4,6 +4,16 @@ Synth Surface 1.1 is a Blender add-on for procedural science-fiction surface tex
 
 This repository is a Blender port and derivative of [Displacement X](https://github.com/satelllte/displacementx), the web-based generator by satelllte and contributors. It retains that project's Git history for fork provenance. The current tree contains the Blender add-on rather than the upstream web app. See [NOTICE.md](NOTICE.md) and [LICENSE](LICENSE).
 
+![Synth Surface displacement applied to a textured panel](docs/images/surface_panel.png)
+
+The generated height map behind the render:
+
+![Grayscale Synth Surface height-map example](docs/images/height_map.png)
+
+Scatter Lights can add colored emission in round or square shapes:
+
+![Round and square scatter-light renders](docs/images/scatter_lights.png)
+
 ## Requirements
 
 - Blender 3.0 or newer, with Blender 5.1 also supported by the current preview and image update code.
@@ -45,6 +55,7 @@ The [full user guide](docs/USER_GUIDE.md) explains every generator, sprite pack,
 - `displacementx_addon/`: installable Blender package and bundled sprite cache.
 - `displacementx_addon/sprites/*/*.svg`: original sprite artwork kept for revisions and cache rebuilding. The release ZIP includes only the prebuilt runtime cache.
 - `docs/USER_GUIDE.md`: detailed installation and usage reference.
+- `docs/images/`: rendered examples and a generated height map; PNG metadata is stripped before publishing.
 - `scripts/build_release.py`: builds a minimal install ZIP from an explicit file list.
 - `scripts/build_sprite_cache.py`: rebuilds the cache when sprite artwork changes.
 - `tests/`: Blender integration checks for the source and the release archive.

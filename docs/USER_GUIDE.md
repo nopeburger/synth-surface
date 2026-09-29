@@ -31,6 +31,16 @@ The add-on creates or updates these packed Blender images:
 
 It also creates the **Synth Surface** material and a modifier stack containing **Synth Surface Weld**, **Synth Surface Subdivision**, and **Synth Surface Displace** as needed.
 
+### Example output
+
+This render shows a generated surface on a subdivided plane, with physical displacement and the derived color material:
+
+![Synth Surface render showing physical displacement on a panel](images/surface_panel.png)
+
+Its grayscale height map is the image driving the **Synth Surface Displace** modifier. Lighter regions are displaced outward relative to darker regions:
+
+![Generated grayscale height map used for the panel render](images/height_map.png)
+
 ## Main actions
 
 | Control | What it does |
@@ -176,6 +186,10 @@ Sprites stamp the bundled SVG-based greeble designs into the generated height ma
 At least one pack must be enabled for sprites to appear. Enabled packs are combined into one random selection pool, so a larger pack is statistically chosen more often than a smaller pack. The SVGs are pre-rasterized into 1024×1024 cache cells and smoothly resampled when stamped. Rectangular SVG artwork is fitted proportionally inside the square cell, preserving circles and the source aspect ratio.
 
 ## Scatter lights
+
+The same layout can use round or square scattered emission, independently of the surface Seed:
+
+![Comparison render of round and square scatter lights](images/scatter_lights.png)
 
 Enable **Scatter Lights** directly below Basics. Change the settings, then click
 **Update Preview** or **Generate & Apply to Selected Object**.
