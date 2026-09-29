@@ -28,9 +28,15 @@ The grayscale height map behind the steel renders:
 
 ![Grayscale Synth Surface height-map example](docs/images/height_map.png)
 
+### Scatter lights
+
 Scatter Lights can add colored emission in round or square shapes:
 
 ![Round and square scatter-light renders](docs/images/scatter_lights.png)
+
+The same feature on a torus, with small glowing lights across the displaced surface:
+
+![Synth Surface scatter lights on a rendered torus](docs/images/scatterlights-torus.png)
 
 ## Requirements
 

@@ -14,6 +14,7 @@ IMAGES = (
     "surface_violet.png",
     "height_map.png",
     "scatter_lights.png",
+    "scatterlights-torus.png",
 )
 
 

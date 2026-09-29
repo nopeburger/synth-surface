@@ -207,6 +207,10 @@ At least one pack must be enabled for sprites to appear. Enabled packs are combi
 
 ## Scatter lights
 
+On a torus, scattered emission follows the generated surface texture:
+
+![Synth Surface scatter lights on a rendered torus](images/scatterlights-torus.png)
+
 The same layout can use round or square scattered emission, independently of the surface Seed:
 
 ![Comparison render of round and square scatter lights](images/scatter_lights.png)
