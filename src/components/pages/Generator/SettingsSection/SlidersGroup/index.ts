@@ -1,1 +1,0 @@
-export {SlidersGroup} from './SlidersGroup';

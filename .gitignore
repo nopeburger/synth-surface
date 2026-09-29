@@ -1,7 +1,16 @@
-# Artifacts
-.astro/
+__pycache__/
+*.py[cod]
+*.blend
+*.blend[0-9]
+*.log
+*.png
+*.jpg
+*.jpeg
+*.mp4
+*.zip
 dist/
-node_modules/
-
-# System files
+test-reports/
+.thumbnails/
 .DS_Store
+Thumbs.db
+.venv/

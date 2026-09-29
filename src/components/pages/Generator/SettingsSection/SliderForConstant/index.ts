@@ -1,1 +1,0 @@
-export {SliderForConstant} from './SliderForConstant';

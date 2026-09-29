@@ -1,1 +1,0 @@
-export {CanvasSection} from './CanvasSection';

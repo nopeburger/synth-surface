@@ -1,39 +1,52 @@
-# Displacement X
+# Synth Surface
 
-Procedural displacement sci-fi maps generator. Web-based alternative to [JSplacement](https://www.google.com/search?q=JSplacement) for [Blender](https://www.blender.org/).
+Synth Surface 1.1 is a Blender add-on for procedural science-fiction surface textures. It builds a grayscale height map, derives color and normal maps, and can add scattered emission lights. **Generate & Apply** creates a material and a non-destructive displacement modifier stack on the selected mesh.
 
-Live at ▶ **[displacementx.pages.dev](https://displacementx.pages.dev/)**
+This repository is a Blender port and derivative of [Displacement X](https://github.com/satelllte/displacementx), the web-based generator by satelllte and contributors. It retains that project's Git history for fork provenance. The current tree contains the Blender add-on rather than the upstream web app. See [NOTICE.md](NOTICE.md) and [LICENSE](LICENSE).
 
-<img src="./public/og.png" alt="Displacement X - social image preview"/>
+## Requirements
 
-## FAQ
+- Blender 3.0 or newer, with Blender 5.1 also supported by the current preview and image update code.
+- A mesh object; a usable UV map is recommended for predictable texture placement.
+- No network connection or separately installed Python packages are needed inside Blender. The sprite cache is bundled.
 
-### What is it used for?
+## Install
 
-The software can be used for generating grayscale height maps for their further application in various 3D rendering software such as Blender, Cinema4D, OctaneRender, etc.
+1. Download the release archive named `synth_surface_v1.1.zip`. If building from this repository, run `python scripts/build_release.py` and use `dist/synth_surface_v1.1.zip`. **Do not use GitHub's “Download ZIP” repository archive** as the install archive; it contains contributor files and has a different directory layout.
+2. In Blender, open **Edit > Preferences > Add-ons**. Choose the drop-down at the upper right, then **Install from Disk** (or **Install…** on older Blender versions).
+3. Select the release ZIP without extracting it. Search for **Synth Surface** in Add-ons and enable **Synth Surface - Procedural Greeble Textures**.
+4. Open a 3D Viewport, press **N** to show its sidebar, and select the **Synth Surface** tab.
 
-### Does it aim to replace the original `JSplacement` software?
+To update, install the newer release ZIP through the same Add-ons menu, then restart Blender if the previous version remains loaded. The add-on's package identifier is `displacementx_addon`, retained for compatibility with existing Blender projects.
 
-No. The application doesn't aim to replace `JSplacement`, but rather to provide a web-based alternative for those who don't want to find its downloads online and install it. Features-wise, it implements some from `JSplacement`, but also has some that didn't exist in it before (e.g., "Composition modes" or "Custom gradient generator").
+## First surface
 
-### What happened to the original `JSplacement` software?
+1. Select a mesh. Add or unwrap a UV map if you want control over texture placement. With no active UV map, the add-on falls back to Local mapping.
+2. In the **Synth Surface** tab, leave the default generators enabled and click **Update Preview**. The preview is a quick, reduced-size view; **Open Large** opens it in an Image Editor window.
+3. Change **Seed** to explore arrangements. Adjust **Iterations** to change density. The Rect, Grid, Cols, Rows, Lines, and Sprites sections control the kinds of marks used.
+4. In **Output**, set **Aspect Ratio** and **Long Edge** (or Custom width and height). Start small, such as 1024 or 2048 pixels, to check memory and generation time. Set **Displacement Strength** to suit the object's scale.
+5. Leave **Auto Subdivision** and **Weld Coincident Vertices** on for a typical low-poly mesh. Click **Generate & Apply to Selected Object**.
+6. Inspect the material and the **Synth Surface Weld**, **Synth Surface Subdivision**, and **Synth Surface Displace** modifiers. Save the `.blend` file; generated images are packed into it.
 
-Unfortunately, the original `JSplacement` software is no longer maintained and it's gone. The author has abandoned the project and removed all the downloads from the internet.
+Optional **Scatter Lights** adds an emission image and material connection. **Light Seed** changes light placement independently of the surface Seed. For visible glow in a render, add a compositor Glare node; the add-on does not change the compositor.
 
-Some links:
+## What the controls do
 
-- Reddit post: [What happened to JSplacement](https://www.reddit.com/r/blender/comments/zfwmjr/does_anyone_know_what_happened_to_jsplacement/).
-- Web port of `JSplacement`: [JSPlacementWeb](https://github.com/satelllte/JSPlacementWeb) _(missing some features)_.
-- Consider supporting `Windmill` - the author of `JSPlacement`: [Website](https://windmillart.net/), [PayPal/WMillArt](https://www.paypal.com/paypalme/WMillArt), [Ko-fi/windmill](https://ko-fi.com/windmill).
+The [full user guide](docs/USER_GUIDE.md) explains every generator, sprite pack, composition mode, color stop, canvas mask, output setting, scatter-light control, and common troubleshooting case. Some quick distinctions:
 
-### Any future plans for `Displacement X`?
+- **Update Preview** changes only the sidebar preview. **Generate & Apply** updates the selected mesh.
+- **Randomize All** changes generator choices and the surface seed, but leaves output dimensions, color stops, displacement settings, and scatter-light settings alone.
+- **Seamless** wraps pattern features across image edges. A shaped canvas mask still has a visible boundary.
+- **Canvas Shape** masks the generated maps; it does not cut mesh geometry.
+- Higher output resolution increases memory use and may require denser mesh subdivision for physical displacement.
 
-No particular plans. I've opened the source code of this project to everyone, so let's see how it goes.
+## Repository layout
 
-### I want to share my work done with the help of `Displacement X`. Where can I do that?
+- `displacementx_addon/`: installable Blender package and bundled sprite cache.
+- `displacementx_addon/sprites/*/*.svg`: original sprite artwork kept for revisions and cache rebuilding. The release ZIP includes only the prebuilt runtime cache.
+- `docs/USER_GUIDE.md`: detailed installation and usage reference.
+- `scripts/build_release.py`: builds a minimal install ZIP from an explicit file list.
+- `scripts/build_sprite_cache.py`: rebuilds the cache when sprite artwork changes.
+- `tests/`: Blender integration checks for the source and the release archive.
 
-Feel free to open an issue in this repository to share your work. I'd love to see what you've created and showcase it right here!
-
-## Contributing
-
-Check out [CONTRIBUTING.md](./CONTRIBUTING.md) guide.
+See [CONTRIBUTING.md](CONTRIBUTING.md) to work on the add-on and rebuild a release.
