@@ -16,6 +16,66 @@ OUTPUT = ROOT / "docs" / "images"
 OUTPUT.mkdir(parents=True, exist_ok=True)
 sys.path.insert(0, str(ROOT))
 
+VARIANTS = {
+    "steel": {
+        "seed": 51,
+        "iterations": 460,
+        "strength": 0.065,
+        "metallic": 0.18,
+        "roughness": 0.68,
+        "view_scale": 1.55,
+        "file": "surface_panel.png",
+        "colors": (
+            (0, (0.012, 0.025, 0.038)),
+            (0.34, (0.035, 0.085, 0.13)),
+            (0.48, (0.065, 0.2, 0.23)),
+            (0.58, (0.19, 0.26, 0.3)),
+            (0.67, (0.31, 0.24, 0.17)),
+            (0.76, (0.14, 0.29, 0.3)),
+            (1, (0.31, 0.39, 0.37)),
+        ),
+        "lights": ((0.85, 0.91, 1), (0.64, 0.82, 1), (1, 0.74, 0.56)),
+    },
+    "copper": {
+        "seed": 84,
+        "iterations": 580,
+        "strength": 0.07,
+        "view_scale": 1.3,
+        "file": "surface_copper.png",
+        "colors": (
+            (0, (0.018, 0.02, 0.025)),
+            (0.34, (0.035, 0.075, 0.09)),
+            (0.48, (0.13, 0.12, 0.1)),
+            (0.58, (0.29, 0.14, 0.075)),
+            (0.67, (0.1, 0.2, 0.23)),
+            (0.76, (0.39, 0.24, 0.13)),
+            (1, (0.5, 0.34, 0.21)),
+        ),
+        "lights": ((1, 0.84, 0.7), (0.72, 0.85, 1), (1, 0.56, 0.32)),
+    },
+    "violet": {
+        "seed": 143,
+        "iterations": 340,
+        "strength": 0.045,
+        "view_scale": 1.0,
+        "file": "surface_violet.png",
+        "colors": (
+            (0, (0.018, 0.018, 0.037)),
+            (0.34, (0.055, 0.045, 0.12)),
+            (0.48, (0.09, 0.12, 0.24)),
+            (0.58, (0.27, 0.1, 0.27)),
+            (0.67, (0.09, 0.21, 0.25)),
+            (0.76, (0.29, 0.21, 0.37)),
+            (1, (0.42, 0.33, 0.49)),
+        ),
+        "lights": ((0.87, 0.82, 1), (0.6, 0.76, 1), (1, 0.66, 0.8)),
+    },
+}
+variant = sys.argv[sys.argv.index("--") + 1] if "--" in sys.argv else "steel"
+if variant not in VARIANTS:
+    raise ValueError("Unknown render variant: " + variant)
+settings = VARIANTS[variant]
+
 import displacementx_addon as package
 from displacementx_addon import addon
 
@@ -25,72 +85,47 @@ package.register()
 scene = bpy.context.scene
 props = scene.displacementx
 addon._initialize_scene_stops()
-props.iterations = 460
-props.seed = 51
+props.iterations = settings["iterations"]
+props.seed = settings["seed"]
 props.resolution = 1024
 props.auto_subdivision = False
-props.subdivision_level = 7
-props.displacement_strength = 0.3
+props.subdivision_level = 10
+props.displacement_strength = settings["strength"]
 props.sprites_enabled = True
-props.sprite_pack_classic = True
+props.sprite_pack_classic = variant != "steel"
 props.sprite_pack_circuitry = True
 props.stops.clear()
-for position, color in (
-    (0, (0.012, 0.025, 0.038)),
-    (0.42, (0.055, 0.11, 0.15)),
-    (0.78, (0.23, 0.39, 0.43)),
-    (1, (0.7, 0.82, 0.73)),
-):
+for position, color in settings["colors"]:
     stop = props.stops.add()
     stop.pos = position
     stop.color = color
 
 bpy.ops.mesh.primitive_plane_add(size=2.5)
 panel = bpy.context.object
-panel.name = "Synth Surface panel"
+panel.name = "Synth Surface plane"
 assert bpy.ops.dx.apply() == {"FINISHED"}
-panel.active_material.node_tree.nodes.get("Principled BSDF").inputs["Metallic"].default_value = 0.55
-panel.active_material.node_tree.nodes.get("Principled BSDF").inputs["Roughness"].default_value = 0.46
+surface_bsdf = panel.active_material.node_tree.nodes.get("Principled BSDF")
+surface_bsdf.inputs["Metallic"].default_value = settings.get("metallic", 0.55)
+surface_bsdf.inputs["Roughness"].default_value = settings.get("roughness", 0.46)
 
-height = bpy.data.images[addon.HEIGHT_IMAGE_NAME]
-height.filepath_raw = str(OUTPUT / "height_map.png")
-height.file_format = "PNG"
-height.save()
+if variant == "steel":
+    height = bpy.data.images[addon.HEIGHT_IMAGE_NAME]
+    height.filepath_raw = str(OUTPUT / "height_map.png")
+    height.file_format = "PNG"
+    height.save()
 
-solidify = panel.modifiers.new("Panel thickness", "SOLIDIFY")
-solidify.thickness = 0.075
-solidify.offset = -1
-
-bpy.ops.mesh.primitive_cube_add(size=1, location=(0, 0, -0.17))
-base = bpy.context.object
-base.name = "Display plinth"
-base.scale = (2.65, 2.65, 0.16)
-bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
-bevel = base.modifiers.new("Soft corners", "BEVEL")
-bevel.width = 0.04
-bevel.segments = 3
-base.modifiers.new("Weighted normals", "WEIGHTED_NORMAL")
-base_mat = bpy.data.materials.new("Graphite plinth")
-base_mat.diffuse_color = (0.018, 0.029, 0.039, 1)
-base_mat.use_nodes = True
-base_bsdf = base_mat.node_tree.nodes.get("Principled BSDF")
-base_bsdf.inputs["Base Color"].default_value = base_mat.diffuse_color
-base_bsdf.inputs["Metallic"].default_value = 0.65
-base_bsdf.inputs["Roughness"].default_value = 0.35
-base.data.materials.append(base_mat)
-
-bpy.ops.object.camera_add(location=(3.3, -3.8, 3.25))
+bpy.ops.object.camera_add(location=(2.5, -3.0, 5.0))
 camera = bpy.context.object
 camera.rotation_euler = (Vector((0, 0, 0)) - camera.location).to_track_quat("-Z", "Y").to_euler()
 camera.data.type = "ORTHO"
-camera.data.ortho_scale = 4.3
+camera.data.ortho_scale = settings["view_scale"]
 scene.camera = camera
 
-for location, energy, size, color in (
-    ((-3, -2, 5), 650, 4, (0.75, 0.9, 1)),
-    ((2, 2, 3), 500, 3, (0.47, 0.78, 1)),
-    ((2, -3, 2), 280, 2, (1, 0.67, 0.42)),
-):
+for (location, energy, size), color in zip((
+    ((-3, -2, 5), 650, 4),
+    ((2, 2, 3), 500, 3),
+    ((2, -3, 2), 280, 2),
+), settings["lights"]):
     bpy.ops.object.light_add(type="AREA", location=location)
     light = bpy.context.object
     light.data.energy = energy
@@ -103,13 +138,17 @@ scene.world.use_nodes = True
 scene.world.node_tree.nodes.get("Background").inputs["Color"].default_value = (0.018, 0.025, 0.036, 1)
 scene.world.node_tree.nodes.get("Background").inputs["Strength"].default_value = 0.6
 scene.render.engine = "CYCLES"
-scene.cycles.samples = 32
+scene.cycles.samples = 48
 scene.cycles.use_denoising = True
-scene.render.resolution_x = 1280
-scene.render.resolution_y = 800
+scene.render.resolution_x = 1600
+scene.render.resolution_y = 1000
 scene.render.resolution_percentage = 100
 scene.render.image_settings.file_format = "PNG"
 scene.view_settings.view_transform = "AgX"
-scene.render.filepath = str(OUTPUT / "surface_panel.png")
+scene.render.filepath = str(OUTPUT / settings["file"])
 bpy.ops.render.render(write_still=True)
+if variant == "steel":
+    camera.data.ortho_scale = 0.85
+    scene.render.filepath = str(OUTPUT / "surface_detail.png")
+    bpy.ops.render.render(write_still=True)
 print("EXAMPLE RENDER PASS", flush=True)

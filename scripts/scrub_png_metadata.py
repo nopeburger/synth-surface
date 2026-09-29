@@ -9,6 +9,9 @@ SIGNATURE = b"\x89PNG\r\n\x1a\n"
 KEEP = {b"IHDR", b"PLTE", b"IDAT", b"IEND", b"tRNS"}
 IMAGES = (
     "surface_panel.png",
+    "surface_detail.png",
+    "surface_copper.png",
+    "surface_violet.png",
     "height_map.png",
     "scatter_lights.png",
 )

@@ -4,9 +4,27 @@ Synth Surface 1.1 is a Blender add-on for procedural science-fiction surface tex
 
 This repository is a Blender port and derivative of [Displacement X](https://github.com/satelllte/displacementx), the web-based generator by satelllte and contributors. It retains that project's Git history for fork provenance. The current tree contains the Blender add-on rather than the upstream web app. See [NOTICE.md](NOTICE.md) and [LICENSE](LICENSE).
 
-![Synth Surface displacement applied to a textured panel](docs/images/surface_panel.png)
+## Surface examples
 
-The generated height map behind the render:
+These Blender renders use different seeds, multicolor height gradients, displacement strengths, and view distances. Each uses a 1024-pixel map and Simple subdivision level 10 on a flat plane to resolve the small texture features. The camera stays within the plane so its outer edge does not distract from the surface.
+
+**Copper, medium view:** 580 iterations, Seed 84, displacement strength 0.07, Classic and Circuitry sprites.
+
+![Copper Synth Surface render from a medium distance](docs/images/surface_copper.png)
+
+**Violet, close view:** 340 iterations, Seed 143, displacement strength 0.045, Classic and Circuitry sprites.
+
+![Violet close render showing fine Synth Surface detail](docs/images/surface_violet.png)
+
+**Steel, medium view:** 460 iterations, Seed 51, displacement strength 0.065, Circuitry sprites. Teal and muted bronze accents pick out different heights without bright white peaks.
+
+![Steel Synth Surface displacement on a flat plane](docs/images/surface_panel.png)
+
+The same steel surface seen closer:
+
+![Close view of fine Synth Surface details](docs/images/surface_detail.png)
+
+The grayscale height map behind the steel renders:
 
 ![Grayscale Synth Surface height-map example](docs/images/height_map.png)
 

@@ -33,11 +33,31 @@ It also creates the **Synth Surface** material and a modifier stack containing *
 
 ### Example output
 
-This render shows a generated surface on a subdivided plane, with physical displacement and the derived color material:
+These examples show how seed, multicolor height gradient, generator density, displacement strength, and camera distance change the result. All use a 1024-pixel map on a flat plane with **Subdivision Level 10**, which samples enough geometry to show narrow features. The camera frames the surface inside the plane boundary. A mesh with many starting faces can become much denser at that level; begin with Auto Subdivision and increase only as needed.
 
-![Synth Surface render showing physical displacement on a panel](images/surface_panel.png)
+| Render | Seed | Iterations | Sprite packs | Strength | View |
+|---|---:|---:|---|---:|---|
+| Copper | 84 | 580 | Classic, Circuitry | 0.07 | Medium |
+| Violet | 143 | 340 | Classic, Circuitry | 0.045 | Close |
+| Steel | 51 | 460 | Circuitry | 0.065 | Medium and close |
 
-Its grayscale height map is the image driving the **Synth Surface Displace** modifier. Lighter regions are displaced outward relative to darker regions:
+**Copper, medium view:**
+
+![Copper Synth Surface render from a medium distance](images/surface_copper.png)
+
+**Violet, close view:**
+
+![Close violet Synth Surface render showing fine geometry](images/surface_violet.png)
+
+**Steel, medium view:**
+
+![Synth Surface render showing physical displacement on a flat plane](images/surface_panel.png)
+
+The steel close view uses the same map and subdivision level. Its teal and muted bronze accents separate heights while the rougher material keeps high areas from turning into bright spots:
+
+![Close render showing fine Synth Surface geometry and texture details](images/surface_detail.png)
+
+The steel grayscale height map drives the **Synth Surface Displace** modifier. Lighter map regions are displaced outward relative to darker regions:
 
 ![Generated grayscale height map used for the panel render](images/height_map.png)
 
