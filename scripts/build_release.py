@@ -6,7 +6,7 @@ from zipfile import ZIP_DEFLATED, ZipFile
 
 ROOT = Path(__file__).resolve().parents[1]
 PACKAGE = ROOT / "displacementx_addon"
-VERSION = "1.1"
+VERSION = "1.2"
 OUTPUT = ROOT / "dist" / f"synth_surface_v{VERSION}.zip"
 
 SOURCES = {

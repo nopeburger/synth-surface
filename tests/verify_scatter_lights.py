@@ -40,7 +40,7 @@ def verify_core():
                   lights_color_mode="SINGLE", lights_color=(1, 0, 0))
     circle = scatter.generate_emission(single, (512, 256))
     square = scatter.generate_emission(dict(single, lights_shape="SQUARE"), (512, 256))
-    yy, xx = np.where(circle[:, :, 0] > 128)
+    yy, xx = np.where(circle[:, :, 0] > 0.5)
     assert np.ptp(xx) == np.ptp(yy)
     assert 0.72 < circle.sum() / square.sum() < 0.85
     assert not circle[:, :, 1:].any()
@@ -56,7 +56,7 @@ def verify_core():
         mask = core.generate_canvas_mask((256, 128), shape)
         assert not masked[~mask].any()
     # Stamp at a boundary: periodic wrapping preserves its energy.
-    wrapped = np.zeros((64, 64, 3), dtype=np.uint8)
+    wrapped = np.zeros((64, 64, 3), dtype=np.float32)
     centered = wrapped.copy()
     clipped = wrapped.copy()
     for shape in ("ROUND", "SQUARE"):
@@ -64,9 +64,9 @@ def verify_core():
         scatter._stamp_light(wrapped, 0, 0, 4, np.array([1, 0.5, 0]), shape, True)
         scatter._stamp_light(centered, 32, 32, 4, np.array([1, 0.5, 0]), shape, True)
         scatter._stamp_light(clipped, 0, 0, 4, np.array([1, 0.5, 0]), shape, False)
-        assert wrapped.sum() == centered.sum()
-        assert clipped.sum() * 4 == wrapped.sum()
-    color = np.full((256, 512, 4), 40, dtype=np.uint8)
+        np.testing.assert_allclose(wrapped.sum(), centered.sum(), rtol=1e-6)
+        np.testing.assert_allclose(clipped.sum() * 4, wrapped.sum(), rtol=1e-6)
+    color = np.full((256, 512, 4), 40 / 255.0, dtype=np.float32)
     color[:, :, 3] = 0
     preview = scatter.preview_with_lights(color, first, 5)
     assert np.array_equal(preview[:, :, 3], color[:, :, 3])
@@ -125,7 +125,7 @@ def verify_blender():
     assert node.image.colorspace_settings.name == "Non-Color"
     expected = scatter.generate_emission(addon._core_settings_from_props(p), 128,
                                         addon._light_palette_from_props(p))
-    np.testing.assert_allclose(pixels(node.image)[:, :, :3], expected / 255, atol=1e-7)
+    np.testing.assert_allclose(pixels(node.image)[:, :, :3], expected, atol=1e-7)
     bsdf = next(n for n in mat.node_tree.nodes if n.type == "BSDF_PRINCIPLED")
     assert bsdf.inputs["Emission Color"].is_linked
     assert bsdf.inputs["Emission Strength"].default_value == 7.5
@@ -170,7 +170,7 @@ def verify_blender():
         assert len(p.light_palette) == 5
         assert bpy.data.images[addon.EMISSION_IMAGE_NAME].packed_file is not None
         np.testing.assert_allclose(pixels(bpy.data.images[addon.EMISSION_IMAGE_NAME]),
-                                   saved_emission, atol=1.0 / 255.0)
+                                   saved_emission, atol=1e-7)
         bpy.ops.dx.apply()
     package.unregister()
     package.register()

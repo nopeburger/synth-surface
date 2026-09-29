@@ -8,7 +8,7 @@ import sys
 import bpy
 
 
-ARCHIVE = Path(__file__).resolve().parents[1] / "dist" / "synth_surface_v1.1.zip"
+ARCHIVE = Path(__file__).resolve().parents[1] / "dist" / "synth_surface_v1.2.zip"
 EXPECTED = {
     "displacementx_addon/__init__.py",
     "displacementx_addon/addon.py",
@@ -42,5 +42,9 @@ with ZipFile(ARCHIVE) as archive:
         assert bpy.ops.dx.apply() == {"FINISHED"}
         assert bpy.context.object.active_material is not None
         assert bpy.data.images[addon.HEIGHT_IMAGE_NAME].packed_file is not None
+        assert package.bl_info["version"] == (1, 2, 0)
+        for name in (addon.HEIGHT_IMAGE_NAME, addon.COLOR_IMAGE_NAME, addon.NORMAL_IMAGE_NAME):
+            assert bpy.data.images[name].is_float
+        assert hasattr(bpy.ops.dx, "export_exr")
         package.unregister()
         print("RELEASE ZIP INTEGRATION PASS", flush=True)

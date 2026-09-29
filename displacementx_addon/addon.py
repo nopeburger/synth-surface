@@ -178,7 +178,7 @@ def _light_palette_from_props(props):
 
 
 def _clamp_color(color):
-    """Return a finite SDR color Blender and the 8-bit renderer can share."""
+    """Return finite normalized color channels for the gradient and lights."""
     channels = []
     for channel in color[:3]:
         value = float(channel)
@@ -243,14 +243,18 @@ def _stops_from_props(props):
     stops = []
     for st in props.stops:
         color = _clamp_color(st.color)
-        stops.append((st.pos, tuple(int(channel * 255) for channel in color)))
+        stops.append((st.pos, tuple(channel * 255.0 for channel in color)))
     if not stops:
         stops = list(DEFAULT_COLOR_STOPS)
     return stops
 
 
 def _make_image(name, arr, colorspace, legacy_names=()):
-    """Create/replace a Blender image from a uint8 HxW, HxWx3, or HxWx4 array."""
+    """Create/replace a full-float Blender image from normalized float32 maps.
+
+    Gradient/preview RGB arrives in sRGB and is decoded to scene-linear before
+    upload. Height, tangent-space normals, alpha and emission remain data.
+    """
     arr = np.asarray(arr)
     if arr.ndim not in (2, 3) or (arr.ndim == 3 and arr.shape[2] not in (3, 4)):
         raise ValueError("Expected an HxW, HxWx3, or HxWx4 image array")
@@ -260,6 +264,7 @@ def _make_image(name, arr, colorspace, legacy_names=()):
     )
     if img is not None and (
         tuple(img.size) != (w, h) or getattr(img, "channels", 4) != 4
+        or not img.is_float
     ):
         # In Blender 5.1, Image.scale() can update Image.size before its RNA
         # pixel collection is resized. An immediate foreach_set() then expects
@@ -272,31 +277,44 @@ def _make_image(name, arr, colorspace, legacy_names=()):
             bpy.data.images.remove(img)
         img = None
     if img is None:
-        img = bpy.data.images.new(name, width=w, height=h, alpha=True)
+        img = bpy.data.images.new(name, width=w, height=h, alpha=True, float_buffer=True)
 
     # Set before writing pixels: some Blender versions clear the image buffer
     # when its color space changes. Reusing the image also prevents orphaned
     # data blocks from accumulating after repeated generation.
-    img.colorspace_settings.name = colorspace
+    if colorspace == "sRGB":
+        for linear_name in ("Linear Rec.709", "Linear"):
+            try:
+                img.colorspace_settings.name = linear_name
+                break
+            except TypeError:
+                continue
+        else:
+            raise RuntimeError("No scene-linear RGB color space is available")
+    else:
+        img.colorspace_settings.name = colorspace
+    img.use_half_precision = False
+    img.file_format = "OPEN_EXR"
     pixels = np.empty((h, w, 4), dtype=np.float32)
-    scale = np.float32(1.0 / 255.0)
     if arr.ndim == 2:
         for channel in range(3):
-            np.multiply(arr, scale, out=pixels[..., channel], casting="unsafe")
+            pixels[..., channel] = arr
         pixels[..., 3] = 1.0
     else:
-        np.multiply(arr[..., :3], scale, out=pixels[..., :3], casting="unsafe")
+        pixels[..., :3] = arr[..., :3]
         if arr.shape[2] == 4:
-            np.multiply(arr[..., 3], scale, out=pixels[..., 3], casting="unsafe")
+            pixels[..., 3] = arr[..., 3]
         else:
             pixels[..., 3] = 1.0
+    if colorspace == "sRGB":
+        for y0 in range(0, h, 256):
+            rgb = pixels[y0:y0 + 256, :, :3]
+            rgb[:] = np.where(rgb <= 0.04045, rgb / 12.92,
+                              ((rgb + 0.055) / 1.055) ** 2.4)
     img.pixels.foreach_set(pixels.ravel())
     del pixels
     img.update()
-    try:
-        img.pack()
-    except Exception:
-        pass
+    img.pack()
     return img
 
 
@@ -568,7 +586,7 @@ def _preview_color(props):
     width, height = _preview_dimensions(*_output_dimensions(props))
     h = generate_height(core, (width, height), seed=props.seed)
     if props.invert:
-        h = (255 - h).astype(np.uint8)
+        h = 1.0 - h
     c = generate_color(h, _stops_from_props(props), sharp=props.sharp_color_edges,
                        alpha_mask=_transparent_canvas_mask(core, width, height))
     emission = generate_emission(core, (width, height), _light_palette_from_props(props))
@@ -728,7 +746,7 @@ class DX_OT_Apply(Operator):
         self.report({"INFO"}, "Generating %dx%d texture..." % (width, height))
         h = generate_height(core, (width, height), seed=props.seed)
         if props.invert:
-            h = (255 - h).astype(np.uint8)
+            h = 1.0 - h
         alpha_mask = _transparent_canvas_mask(core, width, height)
         c = generate_color(
             h,
@@ -893,6 +911,70 @@ class DX_OT_Apply(Operator):
             {"INFO"},
             "Applied Synth Surface material + displacement to '%s'" % obj.name,
         )
+        return {"FINISHED"}
+
+
+def _export_exr_images(images, directory):
+    """Write full 32-bit scene-linear/data EXRs without changing render settings."""
+    if any(not image.is_float for filename, image in images):
+        raise ValueError("Generate & Apply again to upgrade the existing maps to float32")
+    directory = os.path.abspath(bpy.path.abspath(directory))
+    os.makedirs(directory, exist_ok=True)
+    export_scene = bpy.data.scenes.new("Synth Surface EXR Export")
+    previous_cwd = os.getcwd()
+    try:
+        settings = export_scene.render.image_settings
+        settings.file_format = "OPEN_EXR"
+        settings.color_mode = "RGBA"
+        settings.color_depth = "32"
+        settings.exr_codec = "ZIP"
+        export_scene.view_settings.view_transform = "Standard"
+        os.chdir(tempfile.gettempdir())
+        for filename, image in images:
+            image.save_render(os.path.join(directory, filename), scene=export_scene)
+    finally:
+        os.chdir(previous_cwd)
+        bpy.data.scenes.remove(export_scene)
+
+
+class DX_OT_ExportEXR(Operator):
+    bl_idname = "dx.export_exr"
+    bl_label = "Export Maps (32-bit EXR)"
+    bl_description = "Save generated color, height, normal and active light maps as full-float EXRs"
+
+    directory: StringProperty(name="Directory", subtype="DIR_PATH")
+    filter_folder: BoolProperty(default=True, options={"HIDDEN"})
+
+    @classmethod
+    def poll(cls, context):
+        return all(bpy.data.images.get(name) is not None for name in (
+            COLOR_IMAGE_NAME, HEIGHT_IMAGE_NAME, NORMAL_IMAGE_NAME))
+
+    def invoke(self, context, event):
+        context.window_manager.fileselect_add(self)
+        return {"RUNNING_MODAL"}
+
+    def execute(self, context):
+        if not self.directory:
+            self.report({"ERROR"}, "Choose an export folder")
+            return {"CANCELLED"}
+        images = [(filename, bpy.data.images[name]) for filename, name in (
+            ("synth_surface_color.exr", COLOR_IMAGE_NAME),
+            ("synth_surface_height.exr", HEIGHT_IMAGE_NAME),
+            ("synth_surface_normal.exr", NORMAL_IMAGE_NAME),
+        )]
+        obj = context.object
+        material = obj.active_material if obj is not None and obj.type == "MESH" else None
+        node = (material.node_tree.nodes.get("Synth Surface Scatter Lights")
+                if material is not None and material.use_nodes else None)
+        if node is not None and node.image is not None:
+            images.append(("synth_surface_lights.exr", node.image))
+        try:
+            _export_exr_images(images, self.directory)
+        except (OSError, RuntimeError, ValueError) as exc:
+            self.report({"ERROR"}, str(exc))
+            return {"CANCELLED"}
+        self.report({"INFO"}, "Exported %d full-float EXR maps" % len(images))
         return {"FINISHED"}
 
 
@@ -1091,6 +1173,8 @@ class DX_PT_Main(Panel):
             col.prop(props, "subdivision_level")
         col.prop(props, "weld_seams")
         col.prop(props, "displacement_coordinates")
+        col.label(text="32-bit float maps", icon="IMAGE_DATA")
+        col.operator("dx.export_exr", icon="EXPORT")
 
 
 PREVIEW_SCREEN_NAME = "Synth Surface Preview"
@@ -1231,7 +1315,7 @@ class DX_OT_OpenPreview(Operator):
 classes = (DXStop, DXLightColor, DisplacementXSettings, DX_OT_UpdatePreview, DX_OT_Randomize,
            DX_OT_AddStop, DX_OT_DeleteStop, DX_OT_ResetStops,
            DX_OT_AddLightColor, DX_OT_DeleteLightColor, DX_OT_ResetLightPalette,
-           DX_OT_Apply, DX_OT_OpenPreview,
+           DX_OT_Apply, DX_OT_OpenPreview, DX_OT_ExportEXR,
            DX_PT_Main)
 
 

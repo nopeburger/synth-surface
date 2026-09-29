@@ -1,7 +1,7 @@
 """Synth Surface core - procedural greeble texture generation (functional API).
 
 Port of the Displacement X / JS Placement algorithm (github.com/satelllte/displacementx).
-Generates a grayscale height map by stamping random geometric shapes and bundled
+Generates normalized float32 maps by stamping random geometric shapes and
 the original Displacement X sprite packs, then derives color and normal maps.
 Pure numpy - no bpy dependency.
 """
@@ -152,7 +152,7 @@ def get_sprite_pack_counts():
 
 def _get_params(s, name, rng):
     return {
-        "brightness": _randi(rng, s.get(name + "_brightness_min", 0), s.get(name + "_brightness_max", 255)),
+        "brightness": _randi(rng, s.get(name + "_brightness_min", 0), s.get(name + "_brightness_max", 255)) / 255.0,
         "alpha": _randf(rng, s.get(name + "_alpha_min", 0), s.get(name + "_alpha_max", 100)) / 100.0,
         "scale": _randi(rng, s.get(name + "_scale_min", 1), s.get(name + "_scale_max", 4096)),
         "amount": _randi(rng, s.get(name + "_amount_min", 1), s.get(name + "_amount_max", 100)),
@@ -163,8 +163,8 @@ def _get_params(s, name, rng):
 
 def _blend_grayscale(backdrop, source, mode):
     """Apply a Canvas/W3C blend function to straight grayscale colors."""
-    backdrop = np.asarray(backdrop, dtype=np.float32) / 255.0
-    source = np.asarray(source, dtype=np.float32) / 255.0
+    backdrop = np.asarray(backdrop, dtype=np.float32)
+    source = np.asarray(source, dtype=np.float32)
 
     if mode in {"source-over", "source-atop", "luminosity"}:
         result = source
@@ -222,7 +222,7 @@ def _blend_grayscale(backdrop, source, mode):
         )
     else:
         result = source
-    return np.clip(result * 255.0, 0.0, 255.0)
+    return np.clip(result, 0.0, 1.0)
 
 
 def _composite_premultiplied(
@@ -234,7 +234,8 @@ def _composite_premultiplied(
 ):
     """Composite a grayscale source using Canvas globalCompositeOperation rules.
 
-    Color buffers use 0..255 premultiplied values; alpha is stored as uint8.
+    Color and alpha buffers use normalized float32 values. No intermediate
+    blend is rounded to an integer, preserving fractional height information.
     This preserves the Porter-Duff behavior of source-atop, lighter, and xor,
     while the remaining modes use source-over plus their W3C blend function.
     """
@@ -242,12 +243,12 @@ def _composite_premultiplied(
     if source_alpha.ndim == 0 and source_alpha <= 0.0:
         return
 
-    destination_p = destination.astype(np.float32)
+    destination_p = destination
     opaque_backdrop = destination_alpha is None
     backdrop_alpha = (
         1.0
         if opaque_backdrop
-        else destination_alpha.astype(np.float32) / 255.0
+        else destination_alpha
     )
     source_p = np.asarray(source_premultiplied, dtype=np.float32)
 
@@ -267,7 +268,7 @@ def _composite_premultiplied(
             + backdrop_alpha * (1.0 - source_alpha)
         )
     elif mode == "lighter":
-        output_p = np.minimum(255.0, source_p + destination_p)
+        output_p = np.minimum(1.0, source_p + destination_p)
         output_alpha = np.minimum(1.0, source_alpha + backdrop_alpha)
     else:
         source_p = np.broadcast_to(source_p, destination.shape)
@@ -297,11 +298,9 @@ def _composite_premultiplied(
         )
         output_alpha = source_alpha + backdrop_alpha * (1.0 - source_alpha)
 
-    destination[:] = np.clip(np.rint(output_p), 0, 255).astype(np.uint8)
+    destination[:] = np.clip(output_p, 0.0, 1.0)
     if not opaque_backdrop:
-        destination_alpha[:] = np.clip(
-            np.rint(output_alpha * 255.0), 0, 255
-        ).astype(np.uint8)
+        destination_alpha[:] = np.clip(output_alpha, 0.0, 1.0)
 
 
 def _draw_rect(h, h_alpha, s, rng, width, height, composition_mode):
@@ -534,7 +533,7 @@ def _sprite_blend_arrays(gray, alpha):
         return cached
 
     source_alpha = alpha.astype(np.float32) / 255.0
-    premultiplied = gray.astype(np.float32) * source_alpha
+    premultiplied = (gray.astype(np.float32) / 255.0) * source_alpha
     cached = (premultiplied, source_alpha)
     _SPRITE_BLEND_CACHE[cache_key] = cached
     if len(_SPRITE_BLEND_CACHE) > _SPRITE_BLEND_CACHE_LIMIT:
@@ -712,15 +711,17 @@ def generate_canvas_mask(size, shape="FULL", roundness=0.15):
 
 
 def generate_height(settings, size, seed=0):
-    """Generate a uint8 height map for a scalar or (width, height) size."""
+    """Generate a normalized float32 height map for scalar/rectangular sizes.
+
+    Brightness controls retain their familiar 0..255 scale, while composition
+    and sprite resampling preserve fractional values throughout generation.
+    """
     width, height = _canvas_dimensions(size)
     rng = random.Random(seed)
-    # All drawing values are 8-bit. Keeping the canvas uint8 cuts height-map
-    # memory to one quarter of the previous int32 allocation (notably at 8K).
     h = np.full(
         (height, width),
-        int(settings.get("background_brightness", 128)),
-        dtype=np.uint8,
+        float(settings.get("background_brightness", 128)) / 255.0,
+        dtype=np.float32,
     )
     n = int(settings.get("iterations", 1500))
 
@@ -745,7 +746,7 @@ def generate_height(settings, size, seed=0):
     # The opaque background stays opaque for every supported operation except
     # xor, so only that mode needs a second full-resolution alpha canvas.
     h_alpha = (
-        np.full((height, width), 255, dtype=np.uint8)
+        np.ones((height, width), dtype=np.float32)
         if "xor" in composition_modes
         else None
     )
@@ -776,32 +777,32 @@ def generate_height(settings, size, seed=0):
     if mask is not None:
         outside_mode = settings.get("mask_outside", "BACKGROUND")
         outside_value = (
-            int(settings.get("background_brightness", 128))
+            float(settings.get("background_brightness", 128)) / 255.0
             if outside_mode == "BACKGROUND"
-            else 128
+            else 0.5
         )
-        h[~mask] = np.uint8(max(0, min(255, outside_value)))
+        h[~mask] = np.float32(max(0.0, min(1.0, outside_value)))
     return h
 
 
 def generate_color(height, stops, sharp=False, alpha_mask=None):
-    """Map grayscale height (0-255) through a color gradient.
-    stops: list of (pos 0..1, (r,g,b) 0..255). Returns HxWx3 uint8,
-    or HxWx4 when a boolean alpha mask is supplied.
+    """Map normalized float height through an sRGB color gradient.
+    stops: list of (pos 0..1, (r,g,b) 0..255), allowing fractional channels.
+    Returns normalized float32 RGB/RGBA, preserving interpolated colors.
     When sharp is true, each pixel uses the color of the preceding stop rather
     than interpolating, matching a constant-interpolation color ramp.
     """
     if not stops:
         stops = DEFAULT_COLOR_STOPS
     stops = sorted(stops, key=lambda s: s[0])
-    pos = np.array([s[0] * 255.0 for s in stops], dtype=np.float32)
-    col = np.array([s[1] for s in stops], dtype=np.float32)
+    pos = np.array([s[0] for s in stops], dtype=np.float32)
+    col = np.array([s[1] for s in stops], dtype=np.float32) / 255.0
     if alpha_mask is not None:
         alpha_mask = np.asarray(alpha_mask, dtype=bool)
         if alpha_mask.shape != height.shape:
             raise ValueError("alpha mask must match the height-map dimensions")
     channels = 4 if alpha_mask is not None else 3
-    out = np.empty((height.shape[0], height.shape[1], channels), dtype=np.uint8)
+    out = np.empty((height.shape[0], height.shape[1], channels), dtype=np.float32)
 
     # NumPy interpolation returns float64. Processing bounded row chunks avoids
     # several full-resolution floating-point temporaries at 4K/8K.
@@ -812,7 +813,7 @@ def generate_color(height, stops, sharp=False, alpha_mask=None):
         if sharp:
             stop_indices = np.searchsorted(pos, values, side="right") - 1
             stop_indices = np.clip(stop_indices, 0, len(stops) - 1)
-            mapped = np.clip(col[stop_indices], 0, 255).astype(np.uint8)
+            mapped = np.clip(col[stop_indices], 0.0, 1.0)
             out[y0:y1, :, :3] = mapped.reshape(
                 y1 - y0, height.shape[1], 3
             )
@@ -820,25 +821,23 @@ def generate_color(height, stops, sharp=False, alpha_mask=None):
             for channel in range(3):
                 interpolated = np.interp(values, pos, col[:, channel])
                 out[y0:y1, :, channel] = np.clip(
-                    interpolated.reshape(y1 - y0, height.shape[1]), 0, 255
-                ).astype(np.uint8)
+                    interpolated.reshape(y1 - y0, height.shape[1]), 0.0, 1.0
+                )
         if alpha_mask is not None:
-            out[y0:y1, :, 3] = np.where(alpha_mask[y0:y1], 255, 0).astype(
-                np.uint8
-            )
+            out[y0:y1, :, 3] = alpha_mask[y0:y1]
     return out
 
 
 def generate_normal(height, strength=2.0):
-    """Compute a tangent-space normal map from a grayscale height map."""
+    """Compute a normalized float32 tangent-space map from float heights."""
     rows, columns = height.shape
-    out = np.empty((rows, columns, 3), dtype=np.uint8)
+    out = np.empty((rows, columns, 3), dtype=np.float32)
     chunk_rows = 256
     for y0 in range(0, rows, chunk_rows):
         y1 = min(rows, y0 + chunk_rows)
         read_y0 = max(0, y0 - 1)
         read_y1 = min(rows, y1 + 1)
-        sample = height[read_y0:read_y1].astype(np.float32) / 255.0
+        sample = height[read_y0:read_y1].astype(np.float32, copy=False)
         dx = (
             np.gradient(sample, axis=1) * strength
             if columns > 1
@@ -854,9 +853,9 @@ def generate_normal(height, strength=2.0):
         dx = dx[local_y0:local_y1]
         dy = dy[local_y0:local_y1]
         norm = np.sqrt(dx * dx + dy * dy + 1.0)
-        out[y0:y1, :, 0] = np.clip((-dx / norm * 0.5 + 0.5) * 255, 0, 255)
-        out[y0:y1, :, 1] = np.clip((-dy / norm * 0.5 + 0.5) * 255, 0, 255)
-        out[y0:y1, :, 2] = np.clip((1.0 / norm * 0.5 + 0.5) * 255, 0, 255)
+        out[y0:y1, :, 0] = np.clip(-dx / norm * 0.5 + 0.5, 0.0, 1.0)
+        out[y0:y1, :, 1] = np.clip(-dy / norm * 0.5 + 0.5, 0.0, 1.0)
+        out[y0:y1, :, 2] = np.clip(1.0 / norm * 0.5 + 0.5, 0.0, 1.0)
     return out
 
 

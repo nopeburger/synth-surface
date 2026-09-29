@@ -6,8 +6,12 @@ Synth Surface is a Blender port of [Displacement X](https://github.com/satelllte
 
 1. Edit the Python code in `displacementx_addon/`. Blender imports that package directly. Keep the `displacementx_addon` package name for existing project compatibility.
 2. Run `python -m compileall -q displacementx_addon` for a syntax check. This creates ignored `__pycache__` directories locally.
-3. Test in Blender with the package on its Python path, or build and install the release ZIP. For the included integration tests (`tests/verify_scatter_lights.py` and `tests/verify_release.py`), run Blender in background mode with an OS temporary directory as its working directory and absolute paths for `--python` and log output. The scatter-light test creates a temporary `.blend` and removes it afterward.
-4. Run `python scripts/build_release.py` to make `dist/synth_surface_v1.1.zip`. The script includes only runtime files and required legal notices. Inspect archive contents before distributing.
+3. Test in Blender with the package on its Python path, or build and install the release ZIP. For the included integration tests (`tests/verify_float_maps.py`, `tests/verify_scatter_lights.py`, and `tests/verify_release.py`), run Blender in background mode with an OS temporary directory as its working directory and absolute paths for `--python` and log output. Tests create temporary `.blend`/EXR files and remove them afterward. The float test checks sub-byte height values, every composition mode, data/color conversion, displacement, EXR channel depth, and packed image persistence.
+4. Run `python scripts/build_release.py` to make `dist/synth_surface_v1.2.zip`. The script includes only runtime files and required legal notices. Inspect archive contents before distributing.
+
+The core API returns normalized float32 arrays for height, color, normal, and emission. Color is sRGB until the Blender upload decodes it to scene-linear. Data maps stay unchanged. Color-stop inputs retain their 0–255 convention but accept fractional channels. Avoid quantizing intermediate arrays or using half-float EXR packing for generated maps.
+
+Pass `-- --large` after the float test's absolute script path to also check 4K generation, resizing, and full-float packing. This check creates four 4K float images and requires additional memory.
 
 If SVG sprites change, run `python scripts/build_sprite_cache.py` before building. This development-only step requires Inkscape on `PATH`, Pillow, and NumPy. The built cache is used by Blender; no SVG converter is needed at runtime.
 

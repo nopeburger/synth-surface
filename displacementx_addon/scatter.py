@@ -1,7 +1,7 @@
 """Deterministic, resolution-independent emission stamps (NumPy only).
 
 Colors are scene-linear RGB in 0..1, matching Blender's light color pickers.
-The emission texture stores linear RGB in uint8; material strength supplies HDR.
+The emission texture stores linear RGB in float32; material strength supplies HDR.
 """
 import math
 import numpy as np
@@ -73,7 +73,7 @@ def _stamp_light(target, cx, cy, radius, color, shape, seamless):
     else:
         distance = np.hypot(x[None, :] + 0.5 - cx, y[:, None] + 0.5 - cy)
         coverage = np.clip(radius + 0.5 - distance, 0.0, 1.0)
-    stamp = np.rint(coverage[..., None] * color * 255.0).astype(np.uint8)
+    stamp = (coverage[..., None] * color).astype(np.float32)
     for tx0, tx1, sx0, sx1 in _axis_segments(x0, x1 - x0, width, seamless):
         for ty0, ty1, sy0, sy1 in _axis_segments(y0, y1 - y0, height, seamless):
             region = target[ty0:ty1, tx0:tx1]
@@ -82,11 +82,11 @@ def _stamp_light(target, cx, cy, radius, color, shape, seamless):
 
 
 def generate_emission(settings, size, palette=None):
-    """Return a black-backed HxWx3 uint8 linear emission map, or None if off."""
+    """Return a black-backed HxWx3 float32 linear emission map, or None if off."""
     if not settings.get("lights_enabled", False):
         return None
     width, height = _canvas_dimensions(size)
-    out = np.zeros((height, width, 3), dtype=np.uint8)
+    out = np.zeros((height, width, 3), dtype=np.float32)
     samples = light_layout(settings, size)
     if not len(samples):
         return out
@@ -122,10 +122,10 @@ def preview_with_lights(color, emission, intensity):
     out = color.copy()
     # Bounded row buffers also allow this helper to preview larger images.
     for y0 in range(0, color.shape[0], 256):
-        rgb = color[y0:y0 + 256, :, :3].astype(np.float32) / 255.0
+        rgb = color[y0:y0 + 256, :, :3]
         linear = np.where(rgb <= 0.04045, rgb / 12.92, ((rgb + 0.055) / 1.055) ** 2.4)
-        linear += emission[y0:y0 + 256].astype(np.float32) * (float(intensity) / 255.0)
+        linear += emission[y0:y0 + 256] * float(intensity)
         linear = np.clip(linear, 0.0, 1.0)
         rgb = np.where(linear <= 0.0031308, linear * 12.92, 1.055 * linear ** (1.0 / 2.4) - 0.055)
-        out[y0:y0 + 256, :, :3] = np.rint(np.clip(rgb, 0.0, 1.0) * 255).astype(np.uint8)
+        out[y0:y0 + 256, :, :3] = np.clip(rgb, 0.0, 1.0)
     return out

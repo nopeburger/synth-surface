@@ -2,7 +2,7 @@
 
 Maintained by [@nopeburger](https://github.com/nopeburger).
 
-Synth Surface 1.1 is a Blender add-on for procedural science-fiction surface textures. It builds a grayscale height map, derives color and normal maps, and can add scattered emission lights. **Generate & Apply** creates a material and a non-destructive displacement modifier stack on the selected mesh.
+Synth Surface 1.2 is a Blender add-on for procedural science-fiction surface textures. It builds a grayscale height map, derives color and normal maps, and can add scattered emission lights. Generation and Blender image storage use **32-bit floating point**, preserving fractional values through blending and resampling. **Generate & Apply** creates a material and a non-destructive displacement modifier stack on the selected mesh.
 
 This repository is a Blender port and derivative of [Displacement X](https://github.com/satelllte/displacementx), the web-based generator by satelllte and contributors. It retains that project's Git history for fork provenance. The current tree contains the Blender add-on rather than the upstream web app. See [NOTICE.md](NOTICE.md) and [LICENSE](LICENSE).
 
@@ -48,12 +48,20 @@ The same feature on a torus, with small glowing lights across the displaced surf
 
 ## Install
 
-1. Download the release archive named `synth_surface_v1.1.zip`. If building from this repository, run `python scripts/build_release.py` and use `dist/synth_surface_v1.1.zip`. **Do not use GitHub's “Download ZIP” repository archive** as the install archive; it contains contributor files and has a different directory layout.
+1. Download the release archive named [`synth_surface_v1.2.zip`](https://github.com/nopeburger/synth-surface/releases/tag/v1.2.0). If building from this repository, run `python scripts/build_release.py` and use `dist/synth_surface_v1.2.zip`. **Do not use GitHub's “Download ZIP” repository archive** as the install archive; it contains contributor files and has a different directory layout.
 2. In Blender, open **Edit > Preferences > Add-ons**. Choose the drop-down at the upper right, then **Install from Disk** (or **Install…** on older Blender versions).
 3. Select the release ZIP without extracting it. Search for **Synth Surface** in Add-ons and enable **Synth Surface - Procedural Greeble Textures**.
 4. Open a 3D Viewport, press **N** to show its sidebar, and select the **Synth Surface** tab.
 
 To update, install the newer release ZIP through the same Add-ons menu, then restart Blender if the previous version remains loaded. The add-on's package identifier is `displacementx_addon`, retained for compatibility with existing Blender projects.
+
+After updating from 1.1, click **Generate & Apply** to replace existing 8-bit generated maps with float32 images. Old packed maps remain usable until regenerated.
+
+## Floating-point maps and EXR
+
+All generated maps remain full-float when packed into the `.blend`. Color maps are stored in scene-linear RGB; height, normals, and light maps use Non-Color data. Under **Output**, click **Export Maps (32-bit EXR)** and choose a folder to save full-float EXRs with lossless ZIP compression. The light texture retains its separate material Intensity multiplier.
+
+The maximum dimension remains 8192 pixels. Use 2048 while adjusting and 4096 for most final work: float32 images require more memory than the earlier byte images. See the [precision and export guide](docs/USER_GUIDE.md#floating-point-maps-and-exr-export) for details.
 
 ## First surface
 

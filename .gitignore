@@ -7,6 +7,7 @@ __pycache__/
 !docs/images/*.png
 *.jpg
 *.jpeg
+*.exr
 *.mp4
 *.zip
 dist/

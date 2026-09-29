@@ -2,11 +2,11 @@
 
 **Author / Maintainer:** Nopeburger
 
-This guide covers Synth Surface for Blender v1.1. The add-on procedurally builds a grayscale height map, converts that height map into color and normal maps, and applies the result to the selected mesh. Synth Surface is based on the original Displacement X project.
+This guide covers Synth Surface for Blender v1.2. The add-on procedurally builds a grayscale height map, converts that height map into color and normal maps, and applies the result to the selected mesh. All generated maps use 32-bit floating-point precision. Synth Surface is based on the original Displacement X project.
 
 ## Install and open
 
-1. Get the **release archive** `synth_surface_v1.1.zip`. Contributors can create it with `python scripts/build_release.py` from the repository root. The repository's automatic **Download ZIP** is not the install archive.
+1. Get the **release archive** [`synth_surface_v1.2.zip`](https://github.com/nopeburger/synth-surface/releases/tag/v1.2.0). Contributors can create it with `python scripts/build_release.py` from the repository root. The repository's automatic **Download ZIP** is not the install archive.
 2. In Blender, choose **Edit > Preferences > Add-ons**, open the add-on menu at the upper right, and select **Install from Disk**. Older Blender versions may label this **Install…**. Select the release archive without extracting it.
 3. Search for **Synth Surface - Procedural Greeble Textures** and enable its checkbox. If an older build remains active after updating, restart Blender.
 4. Open a **3D Viewport**, press **N** to display the sidebar, and open the **Synth Surface** tab. The panel settings belong to the current scene.
@@ -30,6 +30,26 @@ The add-on creates or updates these packed Blender images:
 - **Synth Surface Lights** supplies emission when Scatter Lights is enabled.
 
 It also creates the **Synth Surface** material and a modifier stack containing **Synth Surface Weld**, **Synth Surface Subdivision**, and **Synth Surface Displace** as needed.
+
+### Floating-point maps and EXR export
+
+Version 1.2 keeps fractional values throughout height composition, sprite resampling, color gradients, normal generation, and scatter-light antialiasing. It creates 32-bit floating-point Blender images and packs them as full-float EXR data into the `.blend`; saving and reopening preserves that precision. No precision toggle is required.
+
+Height values remain normalized to 0–1. Brightness controls retain their familiar 0–255 scale, but blended heights are no longer rounded to those 256 levels. **Neutral Height** outside a canvas mask is exactly 0.5. Color gradients retain the existing appearance and are decoded from sRGB to scene-linear RGB before image upload. Height, normal, and emission images use **Non-Color**; normal RGB stores tangent directions encoded in 0–1. Light textures also use float32, with HDR brightness supplied by the material's **Intensity** multiplier.
+
+To save the generated textures as files:
+
+1. Select the textured mesh and click **Generate & Apply to Selected Object**.
+2. Under **Output**, click **Export Maps (32-bit EXR)**.
+3. Choose a folder and confirm the export.
+
+The exporter writes `synth_surface_color.exr`, `synth_surface_height.exr`, and `synth_surface_normal.exr`. It also writes `synth_surface_lights.exr` when the selected mesh's material uses Scatter Lights. Every file uses full 32-bit float channels and lossless ZIP compression. Color is scene-linear; height, normals, and emission are data. Render settings remain available for your existing render workflow. Files with these names in the chosen folder are replaced on a later export.
+
+When importing these EXRs into another project, use scene-linear RGB for Color and **Non-Color** for Height, Normal, and Lights. The exported light texture does not bake the material Intensity multiplier; set emission strength separately in the receiving material.
+
+Existing 1.1 projects keep their packed byte images until you click **Generate & Apply**. That operation replaces them with float images. Fractional blending may cause small differences from an old 8-bit result even with the same Seed. The bundled sprite raster cache remains 8-bit source artwork, but its interpolation and composition now retain float precision; this does not reconstruct detail absent from the source sprites.
+
+Float images use more memory. Four uncompressed RGBA float32 maps alone require about **1 GiB at 4096 × 4096** or **4 GiB at 8192 × 8192**, with additional memory needed for generation, packing, rendering, and geometry. Start at 2048; use 4096 for most final work and 8192 for close views that need it. Higher precision improves height transitions, while resolving tiny features still requires enough mesh subdivision.
 
 ### Example output
 
@@ -263,11 +283,11 @@ Use Light Seed to explore light arrangements independently of the surface.
 
 Color stops convert the completed grayscale height map into the material’s color texture. They do not change the physical height or normal maps.
 
-Color-picker channels are limited to 0–1 because Synth Surface generates standard 8-bit color maps rather than HDR images. Version 1.0 also repairs out-of-range stop values saved by earlier unbounded picker properties. If an older scene still displays an unexpected stop, click **Reset** to restore black, grey, white, and red.
+Color-picker channels are limited to 0–1 for a normalized base-color palette. Version 1.2 preserves fractional channel values and generates float32 color maps. Out-of-range values saved by earlier unbounded picker properties are repaired. If an older scene still displays an unexpected stop, click **Reset** to restore black, grey, white, and red.
 
 Each stop has:
 
-- **Position:** Where it sits along the height range. `0.0` corresponds to black/height 0 and `1.0` corresponds to white/height 255.
+- **Position:** Where it sits along the normalized height range. `0.0` corresponds to height 0 and `1.0` to height 1 (Brightness 255).
 - **Color:** The material color assigned at that height.
 - **X:** Deletes that stop.
 
