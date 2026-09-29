@@ -6,17 +6,17 @@ This repository is a Blender port and derivative of [Displacement X](https://git
 
 ## Surface examples
 
-These Blender renders use different seeds, multicolor height gradients, displacement strengths, and view distances. Each uses a 1024-pixel map and Simple subdivision level 10 on a flat plane to resolve the small texture features. The camera stays within the plane so its outer edge does not distract from the surface.
+These Blender renders use different seeds, contrasting color bands, displacement strengths, and view distances. Each uses a 2048-pixel map and Simple subdivision level 10 on a flat plane with four starting quads, providing about four million surface faces for narrow features. The camera stays within the plane so its outer edge does not distract from the surface. Sharp Color Edges gives each height range a distinct color.
 
-**Copper, medium view:** 580 iterations, Seed 84, displacement strength 0.07, Classic and Circuitry sprites.
+**Copper, medium view:** 580 iterations, Seed 84, displacement strength 0.07, Classic and Circuitry sprites. Orange copper, oxidized teal, and charcoal bands share the surface.
 
 ![Copper Synth Surface render from a medium distance](docs/images/surface_copper.png)
 
-**Violet, close view:** 340 iterations, Seed 143, displacement strength 0.045, Classic and Circuitry sprites.
+**Violet, close view:** 340 iterations, Seed 143, displacement strength 0.045, Classic and Circuitry sprites. Pink, cyan, indigo, and violet bands mark different heights.
 
 ![Violet close render showing fine Synth Surface detail](docs/images/surface_violet.png)
 
-**Steel, medium view:** 460 iterations, Seed 51, displacement strength 0.065, Circuitry sprites. Teal and muted bronze accents pick out different heights without bright white peaks.
+**Steel, medium view:** 460 iterations, Seed 51, displacement strength 0.065, Circuitry sprites. Teal, blue, bronze, and green bands pick out different heights without bright white peaks.
 
 ![Steel Synth Surface displacement on a flat plane](docs/images/surface_panel.png)
 

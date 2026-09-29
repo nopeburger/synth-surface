@@ -26,13 +26,16 @@ VARIANTS = {
         "view_scale": 1.55,
         "file": "surface_panel.png",
         "colors": (
-            (0, (0.012, 0.025, 0.038)),
-            (0.34, (0.035, 0.085, 0.13)),
-            (0.48, (0.065, 0.2, 0.23)),
-            (0.58, (0.19, 0.26, 0.3)),
-            (0.67, (0.31, 0.24, 0.17)),
-            (0.76, (0.14, 0.29, 0.3)),
-            (1, (0.31, 0.39, 0.37)),
+            (0, (0.01, 0.025, 0.04)),
+            (0.32, (0.025, 0.075, 0.16)),
+            (0.46, (0.025, 0.22, 0.27)),
+            (0.52, (0.14, 0.22, 0.38)),
+            (0.58, (0.35, 0.18, 0.08)),
+            (0.64, (0.02, 0.25, 0.19)),
+            (0.70, (0.20, 0.27, 0.42)),
+            (0.76, (0.38, 0.30, 0.15)),
+            (0.84, (0.28, 0.34, 0.29)),
+            (1, (0.28, 0.34, 0.29)),
         ),
         "lights": ((0.85, 0.91, 1), (0.64, 0.82, 1), (1, 0.74, 0.56)),
     },
@@ -40,16 +43,21 @@ VARIANTS = {
         "seed": 84,
         "iterations": 580,
         "strength": 0.07,
+        "metallic": 0.25,
+        "roughness": 0.62,
         "view_scale": 1.3,
         "file": "surface_copper.png",
         "colors": (
-            (0, (0.018, 0.02, 0.025)),
-            (0.34, (0.035, 0.075, 0.09)),
-            (0.48, (0.13, 0.12, 0.1)),
-            (0.58, (0.29, 0.14, 0.075)),
-            (0.67, (0.1, 0.2, 0.23)),
-            (0.76, (0.39, 0.24, 0.13)),
-            (1, (0.5, 0.34, 0.21)),
+            (0, (0.02, 0.018, 0.02)),
+            (0.32, (0.02, 0.15, 0.17)),
+            (0.46, (0.45, 0.12, 0.035)),
+            (0.52, (0.03, 0.07, 0.12)),
+            (0.58, (0.025, 0.25, 0.27)),
+            (0.64, (0.48, 0.22, 0.08)),
+            (0.70, (0.18, 0.06, 0.10)),
+            (0.76, (0.35, 0.28, 0.11)),
+            (0.84, (0.25, 0.18, 0.13)),
+            (1, (0.25, 0.18, 0.13)),
         ),
         "lights": ((1, 0.84, 0.7), (0.72, 0.85, 1), (1, 0.56, 0.32)),
     },
@@ -57,16 +65,21 @@ VARIANTS = {
         "seed": 143,
         "iterations": 340,
         "strength": 0.045,
+        "metallic": 0.20,
+        "roughness": 0.64,
         "view_scale": 1.0,
         "file": "surface_violet.png",
         "colors": (
             (0, (0.018, 0.018, 0.037)),
-            (0.34, (0.055, 0.045, 0.12)),
-            (0.48, (0.09, 0.12, 0.24)),
-            (0.58, (0.27, 0.1, 0.27)),
-            (0.67, (0.09, 0.21, 0.25)),
-            (0.76, (0.29, 0.21, 0.37)),
-            (1, (0.42, 0.33, 0.49)),
+            (0.32, (0.06, 0.05, 0.26)),
+            (0.46, (0.23, 0.07, 0.35)),
+            (0.52, (0.015, 0.25, 0.30)),
+            (0.58, (0.43, 0.08, 0.26)),
+            (0.64, (0.035, 0.08, 0.23)),
+            (0.70, (0.31, 0.22, 0.49)),
+            (0.76, (0.40, 0.17, 0.07)),
+            (0.84, (0.16, 0.21, 0.36)),
+            (1, (0.16, 0.21, 0.36)),
         ),
         "lights": ((0.87, 0.82, 1), (0.6, 0.76, 1), (1, 0.66, 0.8)),
     },
@@ -87,13 +100,14 @@ props = scene.displacementx
 addon._initialize_scene_stops()
 props.iterations = settings["iterations"]
 props.seed = settings["seed"]
-props.resolution = 1024
+props.resolution = 2048
 props.auto_subdivision = False
 props.subdivision_level = 10
 props.displacement_strength = settings["strength"]
 props.sprites_enabled = True
 props.sprite_pack_classic = variant != "steel"
 props.sprite_pack_circuitry = True
+props.sharp_color_edges = True
 props.stops.clear()
 for position, color in settings["colors"]:
     stop = props.stops.add()
@@ -103,6 +117,10 @@ for position, color in settings["colors"]:
 bpy.ops.mesh.primitive_plane_add(size=2.5)
 panel = bpy.context.object
 panel.name = "Synth Surface plane"
+bpy.ops.object.mode_set(mode="EDIT")
+bpy.ops.mesh.select_all(action="SELECT")
+bpy.ops.mesh.subdivide(number_cuts=1)
+bpy.ops.object.mode_set(mode="OBJECT")
 assert bpy.ops.dx.apply() == {"FINISHED"}
 surface_bsdf = panel.active_material.node_tree.nodes.get("Principled BSDF")
 surface_bsdf.inputs["Metallic"].default_value = settings.get("metallic", 0.55)

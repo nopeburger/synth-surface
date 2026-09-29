@@ -33,13 +33,13 @@ It also creates the **Synth Surface** material and a modifier stack containing *
 
 ### Example output
 
-These examples show how seed, multicolor height gradient, generator density, displacement strength, and camera distance change the result. All use a 1024-pixel map on a flat plane with **Subdivision Level 10**, which samples enough geometry to show narrow features. The camera frames the surface inside the plane boundary. A mesh with many starting faces can become much denser at that level; begin with Auto Subdivision and increase only as needed.
+These examples show how seed, contrasting color bands, generator density, displacement strength, and camera distance change the result. All use a 2048-pixel map on a flat plane divided into four starting quads with **Subdivision Level 10**. This provides about four million surface faces to show narrow features. The camera frames the surface inside the plane boundary. **Sharp Color Edges** assigns a distinct palette color to each height range. A mesh with many starting faces can become much denser at that level; begin with Auto Subdivision and increase only as needed.
 
-| Render | Seed | Iterations | Sprite packs | Strength | View |
-|---|---:|---:|---|---:|---|
-| Copper | 84 | 580 | Classic, Circuitry | 0.07 | Medium |
-| Violet | 143 | 340 | Classic, Circuitry | 0.045 | Close |
-| Steel | 51 | 460 | Circuitry | 0.065 | Medium and close |
+| Render | Seed | Iterations | Sprite packs | Strength | Color bands | View |
+|---|---:|---:|---|---:|---|---|
+| Copper | 84 | 580 | Classic, Circuitry | 0.07 | Orange, teal, charcoal | Medium |
+| Violet | 143 | 340 | Classic, Circuitry | 0.045 | Pink, cyan, indigo, violet | Close |
+| Steel | 51 | 460 | Circuitry | 0.065 | Teal, blue, bronze, green | Medium and close |
 
 **Copper, medium view:**
 
@@ -53,7 +53,7 @@ These examples show how seed, multicolor height gradient, generator density, dis
 
 ![Synth Surface render showing physical displacement on a flat plane](images/surface_panel.png)
 
-The steel close view uses the same map and subdivision level. Its teal and muted bronze accents separate heights while the rougher material keeps high areas from turning into bright spots:
+The steel close view uses the same map and subdivision level. Its teal, blue, bronze, and green bands separate heights while the rougher material keeps high areas from turning into bright spots:
 
 ![Close render showing fine Synth Surface geometry and texture details](images/surface_detail.png)
 
