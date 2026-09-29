@@ -1,5 +1,7 @@
 # Synth Surface
 
+Maintained by [@nopeburger](https://github.com/nopeburger).
+
 Synth Surface 1.1 is a Blender add-on for procedural science-fiction surface textures. It builds a grayscale height map, derives color and normal maps, and can add scattered emission lights. **Generate & Apply** creates a material and a non-destructive displacement modifier stack on the selected mesh.
 
 This repository is a Blender port and derivative of [Displacement X](https://github.com/satelllte/displacementx), the web-based generator by satelllte and contributors. It retains that project's Git history for fork provenance. The current tree contains the Blender add-on rather than the upstream web app. See [NOTICE.md](NOTICE.md) and [LICENSE](LICENSE).
